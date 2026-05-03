@@ -113,7 +113,7 @@ const filler = "-"
 func printHeader () {
 	fmt.Println(strings.Repeat(filler, lineLength))	
 	fmt.Println(strings.ToUpper("👾 👾 👾 Start Mothership 👾 👾 👾"))
-	fmt.Println(strings.Repeat(filler, lineLength))	
+	fmt.Println(strings.Repeat(filler, lineLength), "\n")	
 }
 
 func printFooter () {
@@ -147,8 +147,6 @@ func main() {
 	db, err := newDatabase("")
 	if errors.Is(err, ErrMissingDSN) {
 		panic(fmt.Errorf("unable to initialize database: %w", err))
-	} else {
-		fmt.Println(fmt.Errorf("encountered unexpected error: %w", err))
-	}
-	fmt.Println(db)
+	} 	
+	fmt.Printf("DSN == %s\n\n", db.dsn)
 }
