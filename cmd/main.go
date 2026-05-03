@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"strings"
 	"time"
@@ -9,11 +10,7 @@ import (
 )
 
 // TODO: Create interal dir for domain entities
-// TODO: Wrap errors
-// TODO: Use errors.Is and errors.As
-// TODO: Use sentinel errors for missing config file
 // TODO: Use implicit interfaces to inject dependencies
-// TODO: Use defer, panic and recover
 // TODO: Use stringbuilder
 
 type applicant struct {
@@ -90,6 +87,26 @@ func (a *application) validate() error {
 	return errors.Join(errs...)
 }
 
+var (
+	ErrMissingDSN = errors.New("missing dsn")
+)
+
+type database struct {
+	dsn string
+}
+
+func newDatabase(d string) (*database, error) {
+	if d == "" {
+		d = os.Getenv("MOT_DSN")
+	}
+
+	if d == "" {
+		return nil, ErrMissingDSN
+	}
+
+	return &database { dsn: d }, nil
+}
+
 const lineLength = 80
 const filler = "-"
 
@@ -106,6 +123,11 @@ func printFooter () {
 }
 
 func main() {
+	defer func () {
+		if r := recover(); r != nil {
+			fmt.Println("Recover from unexpected panic")
+		}
+	}()
 	printHeader()
 	defer printFooter()
 
@@ -121,4 +143,12 @@ func main() {
 	} else {
 		fmt.Println(err)
 	}
+
+	db, err := newDatabase("")
+	if errors.Is(err, ErrMissingDSN) {
+		panic(fmt.Errorf("unable to initialize database: %w", err))
+	} else {
+		fmt.Println(fmt.Errorf("encountered unexpected error: %w", err))
+	}
+	fmt.Println(db)
 }
