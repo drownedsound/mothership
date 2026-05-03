@@ -1,31 +1,28 @@
 package main
 
 import (
-	"os"
+	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"errors"
 )
 
-// TODO: Create interal dir for domain entities
-// TODO: Use implicit interfaces to inject dependencies
-// TODO: Use stringbuilder
-
 type applicant struct {
-	last string
+	last  string
 	first string
-	dob time.Time
+	dob   time.Time
 }
 
 func newApplicant(l string, f string, d time.Time) (*applicant, error) {
-	a := &applicant {
-		last: l,
+	a := &applicant{
+		last:  l,
 		first: f,
-		dob: d,
+		dob:   d,
 	}
-	
+
 	if err := a.validate(); err != nil {
 		return nil, err
 	}
@@ -61,14 +58,14 @@ const (
 type application struct {
 	*applicant
 	product product
-	limit int
+	limit   int
 }
 
-func newApplication (a *applicant, p product, l int) (*application, error) {
-	app := &application {
+func newApplication(a *applicant, p product, l int) (*application, error) {
+	app := &application{
 		applicant: a,
-		product: p,
-		limit: l,
+		product:   p,
+		limit:     l,
 	}
 
 	if err := app.validate(); err != nil {
@@ -79,7 +76,7 @@ func newApplication (a *applicant, p product, l int) (*application, error) {
 
 func (a *application) validate() error {
 	var errs []error
-	
+
 	if a.product >= productMax {
 		errs = append(errs, errors.New("invalid product"))
 	}
@@ -87,9 +84,7 @@ func (a *application) validate() error {
 	return errors.Join(errs...)
 }
 
-var (
-	ErrMissingDSN = errors.New("missing dsn")
-)
+var ErrMissingDSN = errors.New("missing dsn")
 
 type database struct {
 	dsn string
@@ -104,26 +99,53 @@ func newDatabase(d string) (*database, error) {
 		return nil, ErrMissingDSN
 	}
 
-	return &database { dsn: d }, nil
+	return &database{dsn: d}, nil
 }
 
-const lineLength = 80
-const filler = "-"
+type server struct {
+	logger logger
+}
 
-func printHeader () {
-	fmt.Println(strings.Repeat(filler, lineLength))	
+func newServer(l logger) *server {
+	l.log("Initialize server")
+	return &server{
+		logger: l,
+	}
+}
+
+type logger interface {
+	log(msg string)
+}
+
+func logToConsole(msg string) {
+	log.Println(msg)
+}
+
+type loggerAdapter func(msg string)
+
+func (l loggerAdapter) log(msg string) {
+	l(msg)
+}
+
+const (
+	lineLength = 80
+	filler     = "-"
+)
+
+func printHeader() {
+	fmt.Println(strings.Repeat(filler, lineLength))
 	fmt.Println(strings.ToUpper("👾 👾 👾 Start Mothership 👾 👾 👾"))
-	fmt.Println(strings.Repeat(filler, lineLength), "\n")	
+	fmt.Println(strings.Repeat(filler, lineLength), "\n")
 }
 
-func printFooter () {
-	fmt.Println(strings.Repeat(filler, lineLength))	
+func printFooter() {
+	fmt.Println(strings.Repeat(filler, lineLength))
 	fmt.Println(strings.ToUpper("👾 👾 👾 End Mothership 👾 👾 👾"))
-	fmt.Println(strings.Repeat(filler, lineLength))	
+	fmt.Println(strings.Repeat(filler, lineLength))
 }
 
 func main() {
-	defer func () {
+	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recover from unexpected panic")
 		}
@@ -144,9 +166,12 @@ func main() {
 		fmt.Println(err)
 	}
 
-	db, err := newDatabase("")
+	db, err := newDatabase("this/is/some/path/")
 	if errors.Is(err, ErrMissingDSN) {
 		panic(fmt.Errorf("unable to initialize database: %w", err))
-	} 	
-	fmt.Printf("DSN == %s\n\n", db.dsn)
+	}
+	fmt.Printf("DSN == %s\n", db.dsn)
+
+	s := newServer(loggerAdapter(logToConsole))
+	fmt.Printf("server == %+v\n\n", s)
 }
