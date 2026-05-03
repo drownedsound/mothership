@@ -8,8 +8,7 @@ import (
 	"errors"
 )
 
-// TODO: Use enums and const
-// TODO: Embed structs
+// TODO: Create interal dir for domain entities
 // TODO: Wrap errors
 // TODO: Use errors.Is and errors.As
 // TODO: Use sentinel errors for missing config file
@@ -54,6 +53,43 @@ func (a *applicant) validate() error {
 	return errors.Join(errs...)
 }
 
+type product uint8
+
+const (
+	productCreditCard = iota
+	productPersonalLoan
+	productMax
+)
+
+type application struct {
+	*applicant
+	product product
+	limit int
+}
+
+func newApplication (a *applicant, p product, l int) (*application, error) {
+	app := &application {
+		applicant: a,
+		product: p,
+		limit: l,
+	}
+
+	if err := app.validate(); err != nil {
+		return nil, err
+	}
+	return app, nil
+}
+
+func (a *application) validate() error {
+	var errs []error
+	
+	if a.product >= productMax {
+		errs = append(errs, errors.New("invalid product"))
+	}
+
+	return errors.Join(errs...)
+}
+
 const lineLength = 80
 const filler = "-"
 
@@ -73,12 +109,15 @@ func main() {
 	printHeader()
 	defer printFooter()
 
-	johnSmith, err := newApplicant("Smith", "John", time.Date(1979, 8, 30, 0, 0, 0, 0, time.UTC))
-	// johnSmith, err := newApplicant("", "", time.Time{})
+	johnSmith, _ := newApplicant("Smith", "John", time.Date(1979, 8, 30, 0, 0, 0, 0, time.UTC))
+	creditCard, err := newApplication(johnSmith, productCreditCard, 1_000_000)
+
 	if err == nil {
-		fmt.Printf("Last Name == %s\n", johnSmith.last)
-		fmt.Printf("First Name == %s\n", johnSmith.first)
-		fmt.Printf("Date of Birth== %s\n", johnSmith.dob.Format(time.DateOnly))
+		fmt.Printf("Product == %v\n", creditCard.product)
+		fmt.Printf("Limit == %d\n", creditCard.limit)
+		fmt.Printf("Last Name == %s\n", creditCard.last)
+		fmt.Printf("First Name == %s\n", creditCard.first)
+		fmt.Printf("Date of Birth == %s\n", creditCard.dob.Format(time.DateOnly))
 	} else {
 		fmt.Println(err)
 	}
